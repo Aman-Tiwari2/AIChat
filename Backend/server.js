@@ -55,7 +55,21 @@ io.on("connection", (socket) => {
     }
   });
 
-  // 6. MANUAL CLEAR: Jab user UI se "Clear Chat" button dabaye
+  // 6. EDIT MESSAGE: User ne purana message edit kiya — history replace karo aur naya response do
+  socket.on("edit-message", async (data) => {
+    // Replace entire chat history with the edited version from frontend
+    chatHistory.length = 0;
+    if (data.history && Array.isArray(data.history)) {
+      data.history.forEach((msg) => chatHistory.push(msg));
+    }
+    // Generate new response for the edited message
+    const fullResponse = await streamResponse(chatHistory, socket);
+    if (fullResponse) {
+      chatHistory.push({ role: 'assistant', content: fullResponse });
+    }
+  });
+
+  // 7. MANUAL CLEAR: Jab user UI se "Clear Chat" button dabaye
   socket.on("clear-chat", () => {
     chatHistory.length = 0;
     console.log(`Memory cleared for user: ${socket.id}`);
