@@ -115,6 +115,22 @@ const CheckIcon = () => (
   </svg>
 );
 
+const EditIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
 // ── Helpers ───────────────────────────────────────────────────
 const genId      = () => Date.now().toString(36) + Math.random().toString(36).slice(2);
 const fmtTime    = (d) => d ? new Date(d).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) : '';
@@ -233,6 +249,9 @@ export default function App() {
   const [isWaiting,     setIsWaiting]     = useState(false);
   const [sidebarOpen,   setSidebarOpen]   = useState(true);
   const [copiedId,      setCopiedId]      = useState(null);
+  const [feedback,      setFeedback]      = useState({});   // { [msgId]: 'up' | 'down' }
+  const [editingId,     setEditingId]     = useState(null); // id of message being edited
+  const [editText,      setEditText]      = useState('');
   const [currentConvId, setCurrentConvId] = useState(null);
 
   const [conversations, setConversations] = useState(() => {
@@ -240,8 +259,9 @@ export default function App() {
     catch { return []; }
   });
 
-  const messagesEndRef = useRef(null);
-  const textareaRef    = useRef(null);
+  const messagesEndRef  = useRef(null);
+  const textareaRef     = useRef(null);
+  const editTextareaRef = useRef(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -333,6 +353,68 @@ export default function App() {
     catch { /* ignore */ }
   };
 
+  const handleFeedback = (id, type) => {
+    setFeedback((prev) => ({ ...prev, [id]: prev[id] === type ? null : type }));
+  };
+
+  const handleRegenerate = useCallback((msgIndex) => {
+    if (isStreaming || isWaiting) return;
+    // Find the user message just before this bot message
+    let userMsg = null;
+    for (let i = msgIndex - 1; i >= 0; i--) {
+      if (messages[i].sender === 'user') { userMsg = messages[i]; break; }
+    }
+    if (!userMsg) return;
+    // Remove bot message from UI
+    setMessages((prev) => prev.slice(0, msgIndex));
+    setIsWaiting(true);
+    // Ask server to pop last assistant response and re-process
+    socket.emit('regenerate', { input: userMsg.text });
+  }, [messages, socket, isStreaming, isWaiting]);
+
+  const handleEditStart = useCallback((msg) => {
+    if (isStreaming || isWaiting) return;
+    setEditingId(msg.id);
+    setEditText(msg.text);
+    setTimeout(() => editTextareaRef.current?.focus(), 50);
+  }, [isStreaming, isWaiting]);
+
+  const handleEditCancel = () => {
+    setEditingId(null);
+    setEditText('');
+  };
+
+  const handleEditSubmit = useCallback(() => {
+    const text = editText.trim();
+    if (!text || !socket || isStreaming || isWaiting) return;
+
+    // Find the index of the message being edited
+    const msgIndex = messages.findIndex((m) => m.id === editingId);
+    if (msgIndex === -1) return;
+
+    // Remove this user message + everything after it (bot response, subsequent messages)
+    // Then add the edited message and send to server
+    setMessages((prev) => [
+      ...prev.slice(0, msgIndex),
+      { id: genId(), text, sender: 'user', timestamp: new Date() },
+    ]);
+
+    // Clear server chat history from this point and resend
+    socket.emit('clear-chat');
+    // Rebuild: send all remaining user messages up to this point + new edited one
+    const remainingHistory = messages.slice(0, msgIndex);
+    const historyToSend = [];
+    remainingHistory.forEach((m) => {
+      historyToSend.push({ role: m.sender === 'user' ? 'user' : 'assistant', content: m.text });
+    });
+    historyToSend.push({ role: 'user', content: text });
+    socket.emit('edit-message', { history: historyToSend, input: text });
+
+    setEditingId(null);
+    setEditText('');
+    setIsWaiting(true);
+  }, [editText, editingId, messages, socket, isStreaming, isWaiting]);
+
   const grouped = conversations.reduce((acc, c) => {
     const lbl = fmtDate(c.createdAt);
     (acc[lbl] = acc[lbl] || []).push(c);
@@ -420,10 +502,6 @@ export default function App() {
             </button>
           </div>
           <div className="topbar-right">
-            <div className={`status-pill ${isConnected ? 'connected' : 'disconnected'}`}>
-              <span className={`status-dot ${isConnected ? 'connected' : 'disconnected'}`} />
-              {isConnected ? 'Live' : 'Offline'}
-            </div>
           </div>
         </div>
 
@@ -433,7 +511,7 @@ export default function App() {
             <div className="empty-state">
               <div className="empty-icon"><ZapIcon size={22} /></div>
               <h2>How can I help you today?</h2>
-              <p>Your enterprise AI assistant, powered by Gemini.</p>
+              <p>Your enterprise AI assistant, powered by Groq.</p>
               <div className="capability-cards">
                 {CAPS.map(({ Icon, title, desc }, i) => (
                   <div key={i} className="capability-card"
@@ -452,45 +530,92 @@ export default function App() {
               {messages.map((msg) => (
                 <div key={msg.id} className={`message-row ${msg.sender}`}>
 
-                  <div className="msg-avatar">
-                    {msg.sender === 'bot'
-                      ? <div className="bot-avatar"><BotIcon /></div>
-                      : <div className="user-avatar">EU</div>
-                    }
-                  </div>
-
                   <div className="message-body">
-                    <div className="message-meta">
-                      <span className="sender-name">{msg.sender === 'bot' ? 'NexusAI' : 'You'}</span>
-                      <span className="msg-time">{fmtTime(msg.timestamp)}</span>
-                      {msg.isStreaming && <span className="streaming-badge">Responding…</span>}
-                    </div>
+                    {msg.isStreaming && <span className="streaming-badge">Responding…</span>}
 
-                    <div className={`message-bubble ${msg.sender}`}>
-                      {msg.sender === 'bot' ? (
-                        <div className="markdown-content">
-                          <ReactMarkdown components={MD_COMPONENTS}>{msg.text}</ReactMarkdown>
-                          {msg.isStreaming && <span className="cursor-blink">▋</span>}
+                    {/* Edit mode for user messages */}
+                    {msg.sender === 'user' && editingId === msg.id ? (
+                      <div className="edit-mode">
+                        <textarea
+                          ref={editTextareaRef}
+                          className="edit-textarea"
+                          value={editText}
+                          onChange={(e) => {
+                            setEditText(e.target.value);
+                            e.target.style.height = 'auto';
+                            e.target.style.height = Math.min(e.target.scrollHeight, 200) + 'px';
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleEditSubmit(); }
+                            if (e.key === 'Escape') handleEditCancel();
+                          }}
+                          rows={1}
+                        />
+                        <div className="edit-actions">
+                          <button className="edit-cancel-btn" onClick={handleEditCancel}>
+                            Cancel
+                          </button>
+                          <button
+                            className="edit-submit-btn"
+                            onClick={handleEditSubmit}
+                            disabled={!editText.trim()}
+                          >
+                            <SendIcon /> Send
+                          </button>
                         </div>
-                      ) : (
-                        <p>{msg.text}</p>
-                      )}
-                    </div>
-
-                    {!msg.isStreaming && (
-                      <div className="message-actions">
-                        <button className={`action-btn ${copiedId === msg.id ? 'copied' : ''}`}
-                          onClick={() => handleCopy(msg.text, msg.id)} title="Copy">
-                          {copiedId === msg.id ? <CheckIcon /> : <CopyIcon />}
-                        </button>
-                        {msg.sender === 'bot' && (
-                          <>
-                            <button className="action-btn" title="Good response"><ThumbUpIcon /></button>
-                            <button className="action-btn" title="Bad response"><ThumbDownIcon /></button>
-                            <button className="action-btn" title="Regenerate"><RefreshIcon /></button>
-                          </>
-                        )}
                       </div>
+                    ) : (
+                      <>
+                        <div className={`message-bubble ${msg.sender}`}>
+                          {msg.sender === 'bot' ? (
+                            <div className="markdown-content">
+                              <ReactMarkdown components={MD_COMPONENTS}>{msg.text}</ReactMarkdown>
+                              {msg.isStreaming && <span className="cursor-blink">▋</span>}
+                            </div>
+                          ) : (
+                            <p>{msg.text}</p>
+                          )}
+                        </div>
+
+                        {!msg.isStreaming && (
+                          <div className="message-actions">
+                            <button className={`action-btn ${copiedId === msg.id ? 'copied' : ''}`}
+                              onClick={() => handleCopy(msg.text, msg.id)} title="Copy">
+                              {copiedId === msg.id ? <CheckIcon /> : <CopyIcon />}
+                            </button>
+                            {msg.sender === 'user' && (
+                              <button
+                                className="action-btn"
+                                onClick={() => handleEditStart(msg)}
+                                title="Edit message">
+                                <EditIcon />
+                              </button>
+                            )}
+                            {msg.sender === 'bot' && (
+                              <>
+                                <button
+                                  className={`action-btn ${feedback[msg.id] === 'up' ? 'active-up' : ''}`}
+                                  onClick={() => handleFeedback(msg.id, 'up')}
+                                  title="Good response">
+                                  <ThumbUpIcon />
+                                </button>
+                                <button
+                                  className={`action-btn ${feedback[msg.id] === 'down' ? 'active-down' : ''}`}
+                                  onClick={() => handleFeedback(msg.id, 'down')}
+                                  title="Bad response">
+                                  <ThumbDownIcon />
+                                </button>
+                                <button
+                                  className="action-btn"
+                                  onClick={() => handleRegenerate(messages.findIndex((m) => m.id === msg.id))}
+                                  title="Regenerate response">
+                                  <RefreshIcon />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
