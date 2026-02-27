@@ -124,12 +124,39 @@ const fmtDate    = (d) => {
   return new Date(d).toLocaleDateString([], { month: 'short', day: 'numeric' });
 };
 
+// ── Capability Card Icons ─────────────────────────────────────
+const IconConversation = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </svg>
+);
+const IconAnalysis = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
+    <line x1="6"  y1="20" x2="6"  y2="14"/>
+  </svg>
+);
+const IconStreaming = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+  </svg>
+);
+const IconSecure = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+  </svg>
+);
+
 // ── Capability Cards ──────────────────────────────────────────
 const CAPS = [
-  { icon: '💬', title: 'Natural Conversations',  desc: 'Fluid, context-aware dialogues'            },
-  { icon: '📊', title: 'Data Analysis',          desc: 'Insights from complex data & reports'      },
-  { icon: '⚡', title: 'Real-time Streaming',    desc: 'Responses delivered as they\'re generated' },
-  { icon: '🔒', title: 'Secure & Private',       desc: 'Enterprise-grade session protection'       },
+  { Icon: IconConversation, title: 'Natural Conversations',  desc: 'Fluid, context-aware dialogues'            },
+  { Icon: IconAnalysis,     title: 'Data Analysis',          desc: 'Insights from complex data & reports'      },
+  { Icon: IconStreaming,    title: 'Real-time Streaming',    desc: 'Responses delivered as they\'re generated' },
+  { Icon: IconSecure,       title: 'Secure & Private',       desc: 'Enterprise-grade session protection'       },
 ];
 
 // ── App ───────────────────────────────────────────────────────
@@ -344,13 +371,13 @@ export default function App() {
               <h2>How can I help you today?</h2>
               <p>Your enterprise AI assistant, powered by Gemini.</p>
               <div className="capability-cards">
-                {CAPS.map((cap, i) => (
+                {CAPS.map(({ Icon, title, desc }, i) => (
                   <div key={i} className="capability-card"
-                    onClick={() => { setInput(cap.title + ' — '); textareaRef.current?.focus(); }}>
-                    <span className="cap-icon">{cap.icon}</span>
+                    onClick={() => { setInput(title + ' — '); textareaRef.current?.focus(); }}>
+                    <span className="cap-icon"><Icon /></span>
                     <div>
-                      <div className="cap-title">{cap.title}</div>
-                      <div className="cap-desc">{cap.desc}</div>
+                      <div className="cap-title">{title}</div>
+                      <div className="cap-desc">{desc}</div>
                     </div>
                   </div>
                 ))}
