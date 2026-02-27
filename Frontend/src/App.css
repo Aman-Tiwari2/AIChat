@@ -480,12 +480,10 @@
 .empty-icon {
   width: 48px;
   height: 48px;
-  background: linear-gradient(135deg, #a78bfa, #7c3aed);
-  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--brand);
   margin-bottom: 18px;
 }
 
