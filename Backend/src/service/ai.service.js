@@ -20,7 +20,7 @@ Strict rules:
 async function streamResponse(chatHistory, socket) {
   try {
     const responseStream = await ai.models.generateContentStream({
-      model: "gemini-2.5-flash-lite",
+      model: "gemini-1.5-flash",
       contents: chatHistory,
       systemInstruction: SYSTEM_INSTRUCTION,
       generationConfig: {
