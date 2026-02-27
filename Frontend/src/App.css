@@ -107,12 +107,10 @@
 .brand-icon {
   width: 30px;
   height: 30px;
-  background: linear-gradient(135deg, #a78bfa, #7c3aed);
-  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--brand);
   flex-shrink: 0;
 }
 
