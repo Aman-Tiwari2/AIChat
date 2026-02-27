@@ -1,7 +1,7 @@
-const { GoogleGenAI } = require("@google/genai");
+const Anthropic = require("@anthropic-ai/sdk");
 
-// Ensure .env contains GEMINI_API_KEY
-const ai = new GoogleGenAI({});
+// Ensure .env contains ANTHROPIC_API_KEY
+const client = new Anthropic.default();
 
 const SYSTEM_INSTRUCTION = `You are NexusAI, an intelligent enterprise assistant built exclusively for the NexusAI platform.
 
@@ -19,40 +19,38 @@ Strict rules:
 
 async function streamResponse(chatHistory, socket) {
   try {
-    const responseStream = await ai.models.generateContentStream({
-      model: "gemini-1.5-flash",
-      contents: chatHistory,
-      systemInstruction: SYSTEM_INSTRUCTION,
-      generationConfig: {
-        temperature: 0.7,
-        maxOutputTokens: 1024,
-      },
+    const stream = client.messages.stream({
+      model: "claude-haiku-4-5",
+      max_tokens: 1024,
+      system: SYSTEM_INSTRUCTION,
+      messages: chatHistory, // format: [{role: "user", content: "..."}, ...]
     });
 
     let fullResponseText = "";
 
-    // Jaise-jaise word aayega, usko 'fullResponseText' mein jodenge
-    // aur phir poora ka poora text frontend ko bhejenge
-    for await (const chunk of responseStream) {
-      if (chunk.text) {
-        fullResponseText += chunk.text;
-        socket.emit('ai-message-chunk', { text: fullResponseText });
+    for await (const event of stream) {
+      if (
+        event.type === "content_block_delta" &&
+        event.delta.type === "text_delta"
+      ) {
+        fullResponseText += event.delta.text;
+        socket.emit("ai-message-chunk", { text: fullResponseText });
       }
     }
-    
-    // Jab stream khatam ho jaye
-    socket.emit('ai-message-done');
-    
-    // Return full text so server.js can save it in history
-    return fullResponseText; 
 
+    // Jab stream khatam ho jaye
+    socket.emit("ai-message-done");
+
+    // Return full text so server.js can save it in history
+    return fullResponseText;
   } catch (error) {
     console.error("Streaming error:", error);
-    socket.emit('ai-message-chunk', { text: "\n\n**Error:** Something went wrong generating the response." });
-    socket.emit('ai-message-done');
+    socket.emit("ai-message-chunk", {
+      text: "\n\n**Error:** Something went wrong generating the response.",
+    });
+    socket.emit("ai-message-done");
     return "Error generating response.";
   }
 }
 
 module.exports = streamResponse;
-

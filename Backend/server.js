@@ -18,20 +18,20 @@ io.on("connection", (socket) => {
   const chatHistory = []; 
 
   socket.on("ai-message", async (data) => {
-    // 1. User message save karein
+    // 1. User message save karein (Anthropic format)
     chatHistory.push({
         role: "user",
-        parts: [{ text: data.input }]
+        content: data.input
     });
 
     // 2. AI se streaming start karwao
     const fullResponse = await streamResponse(chatHistory, socket);
-    
-    // 3. AI ka response history mein save karein
+
+    // 3. AI ka response history mein save karein (Anthropic format)
     if (fullResponse) {
         chatHistory.push({
-            role: "model",
-            parts: [{ text: fullResponse }]
+            role: "assistant",
+            content: fullResponse
         });
     }
 
