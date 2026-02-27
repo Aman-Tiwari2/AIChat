@@ -647,6 +647,10 @@
   animation: msg-in 0.22s var(--ease);
 }
 
+.message-row.user {
+  flex-direction: row-reverse;
+}
+
 @keyframes msg-in {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -733,13 +737,28 @@
 }
 
 /* Bubbles */
+.message-row.user .message-body {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+}
+
+.message-row.user .message-meta {
+  justify-content: flex-end;
+}
+
+.message-row.user .message-actions {
+  justify-content: flex-end;
+}
+
 .message-bubble.user {
   display: inline-block;
   background: var(--user-bg);
   color: var(--user-text);
   padding: 10px 15px;
   border-radius: var(--r-l);
-  border-bottom-left-radius: var(--r-s);
+  border-bottom-right-radius: var(--r-s);
+  border-bottom-left-radius: var(--r-l);
   max-width: 85%;
   box-shadow: var(--shadow-s);
 }
