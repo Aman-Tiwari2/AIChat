@@ -478,14 +478,18 @@
 }
 
 .empty-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #a78bfa, #7c3aed);
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #a78bfa;
-  margin-bottom: 16px;
+  color: #fff;
+  margin-bottom: 18px;
 }
 
-.empty-icon svg { width: 36px; height: 36px; }
+.empty-icon svg { width: 22px; height: 22px; }
 
 .empty-state h2 {
   font-size: 26px;

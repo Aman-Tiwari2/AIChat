@@ -86,8 +86,8 @@ const MenuIcon = () => (
   </svg>
 );
 
-const ZapIcon = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+const ZapIcon = ({ size = 13 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
     <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
   </svg>
@@ -431,7 +431,7 @@ export default function App() {
         <div className="messages-area">
           {messages.length === 0 && !isWaiting ? (
             <div className="empty-state">
-              <div className="empty-icon"><BotIcon /></div>
+              <div className="empty-icon"><ZapIcon size={22} /></div>
               <h2>How can I help you today?</h2>
               <p>Your enterprise AI assistant, powered by Gemini.</p>
               <div className="capability-cards">
