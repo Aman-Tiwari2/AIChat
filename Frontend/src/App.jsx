@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import ReactMarkdown from 'react-markdown';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import './App.css';
 
 // ── SVG Icons ─────────────────────────────────────────────────
@@ -122,6 +124,68 @@ const fmtDate    = (d) => {
   if (diff === 0) return 'Today';
   if (diff === 1) return 'Yesterday';
   return new Date(d).toLocaleDateString([], { month: 'short', day: 'numeric' });
+};
+
+// ── Code Block Icon ───────────────────────────────────────────
+const CodeBlockIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/>
+  </svg>
+);
+
+// ── Custom Code Block ─────────────────────────────────────────
+function CodeBlock({ language, value }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    await navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <div className="code-block">
+      <div className="code-block-header">
+        <div className="code-block-lang">
+          <CodeBlockIcon />
+          <span>{language || 'code'}</span>
+        </div>
+        <button className="code-copy-btn" onClick={copy}>
+          {copied ? (
+            <><CheckIcon /><span>Copied!</span></>
+          ) : (
+            <><CopyIcon /><span>Copy</span></>
+          )}
+        </button>
+      </div>
+      <SyntaxHighlighter
+        language={language || 'text'}
+        style={oneDark}
+        customStyle={{
+          margin: 0,
+          padding: '14px 16px',
+          background: '#161616',
+          borderRadius: '0 0 10px 10px',
+          fontSize: '13px',
+          lineHeight: '1.65',
+        }}
+        codeTagProps={{ style: { fontFamily: 'JetBrains Mono, Fira Code, Consolas, monospace' } }}
+      >
+        {value}
+      </SyntaxHighlighter>
+    </div>
+  );
+}
+
+// ── Markdown Components ───────────────────────────────────────
+const MD_COMPONENTS = {
+  code({ node, inline, className, children, ...props }) {
+    const match = /language-(\w+)/.exec(className || '');
+    const value = String(children).replace(/\n$/, '');
+    if (!inline && match) {
+      return <CodeBlock language={match[1]} value={value} />;
+    }
+    return <code className={className} {...props}>{children}</code>;
+  },
 };
 
 // ── Capability Card Icons ─────────────────────────────────────
@@ -405,7 +469,7 @@ export default function App() {
                     <div className={`message-bubble ${msg.sender}`}>
                       {msg.sender === 'bot' ? (
                         <div className="markdown-content">
-                          <ReactMarkdown>{msg.text}</ReactMarkdown>
+                          <ReactMarkdown components={MD_COMPONENTS}>{msg.text}</ReactMarkdown>
                           {msg.isStreaming && <span className="cursor-blink">▋</span>}
                         </div>
                       ) : (
