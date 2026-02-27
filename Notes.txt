@@ -1,4 +1,0 @@
-Here we are going to talk about two types of events.
-
-1. Build-In events
-2. Custom events 
