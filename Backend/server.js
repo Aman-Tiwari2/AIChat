@@ -42,9 +42,22 @@ io.on("connection", (socket) => {
     }
   });
 
-  // 5. MANUAL CLEAR: Jab user UI se "Clear Chat" button dabaye
+  // 5. REGENERATE: Last assistant response hata ke dobara generate karo
+  socket.on("regenerate", async (data) => {
+    // Last assistant response history se hata do
+    if (chatHistory.length && chatHistory[chatHistory.length - 1].role === 'assistant') {
+      chatHistory.pop();
+    }
+    // User message already history mein hai, dobara mat daalo — bas regenerate karo
+    const fullResponse = await streamResponse(chatHistory, socket);
+    if (fullResponse) {
+      chatHistory.push({ role: 'assistant', content: fullResponse });
+    }
+  });
+
+  // 6. MANUAL CLEAR: Jab user UI se "Clear Chat" button dabaye
   socket.on("clear-chat", () => {
-    chatHistory.length = 0; // Array completely empty ho jayega
+    chatHistory.length = 0;
     console.log(`Memory cleared for user: ${socket.id}`);
   });
 

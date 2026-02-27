@@ -22,7 +22,7 @@ async function streamResponse(chatHistory, socket) {
     const stream = await client.chat.completions.create({
       model: "llama-3.3-70b-versatile",
       messages: [
-        { role: "system", content: SYSTEM_INSTRUCTION },
+        // { role: "system", content: SYSTEM_INSTRUCTION },
         ...chatHistory, // format: [{role: "user", content: "..."}, ...]
       ],
       max_tokens: 1024,
