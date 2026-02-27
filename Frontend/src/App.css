@@ -535,7 +535,17 @@
   transform: translateY(-1px);
 }
 
-.cap-icon { font-size: 20px; line-height: 1; flex-shrink: 0; }
+.cap-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: #333;
+  border-radius: 8px;
+  color: #a78bfa;
+  flex-shrink: 0;
+}
 
 .cap-title {
   font-size: 13px;
