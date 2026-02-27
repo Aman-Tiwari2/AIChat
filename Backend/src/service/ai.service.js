@@ -1,7 +1,7 @@
-const Anthropic = require("@anthropic-ai/sdk");
+const Groq = require("groq-sdk");
 
-// Ensure .env contains ANTHROPIC_API_KEY
-const client = new Anthropic.default();
+// Ensure .env contains GROQ_API_KEY
+const client = new Groq.default();
 
 const SYSTEM_INSTRUCTION = `You are NexusAI, an intelligent enterprise assistant built exclusively for the NexusAI platform.
 
@@ -19,21 +19,23 @@ Strict rules:
 
 async function streamResponse(chatHistory, socket) {
   try {
-    const stream = client.messages.stream({
-      model: "claude-haiku-4-5",
+    const stream = await client.chat.completions.create({
+      model: "llama-3.3-70b-versatile",
+      messages: [
+        { role: "system", content: SYSTEM_INSTRUCTION },
+        ...chatHistory, // format: [{role: "user", content: "..."}, ...]
+      ],
       max_tokens: 1024,
-      system: SYSTEM_INSTRUCTION,
-      messages: chatHistory, // format: [{role: "user", content: "..."}, ...]
+      temperature: 0.7,
+      stream: true,
     });
 
     let fullResponseText = "";
 
-    for await (const event of stream) {
-      if (
-        event.type === "content_block_delta" &&
-        event.delta.type === "text_delta"
-      ) {
-        fullResponseText += event.delta.text;
+    for await (const chunk of stream) {
+      const text = chunk.choices[0]?.delta?.content || "";
+      if (text) {
+        fullResponseText += text;
         socket.emit("ai-message-chunk", { text: fullResponseText });
       }
     }
