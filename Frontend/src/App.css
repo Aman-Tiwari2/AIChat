@@ -897,11 +897,11 @@
 .input-wrapper {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   background: var(--input-bg);
   border: 1px solid #3a3a3a;
   border-radius: var(--r-xl);
-  padding: 12px 12px 12px 18px;
+  padding: 8px 8px 8px 16px;
   transition: border-color var(--dur) var(--ease),
               box-shadow var(--dur) var(--ease);
   max-width: 760px;
@@ -950,8 +950,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   background: #fff;
   border: none;
   border-radius: 50%;
