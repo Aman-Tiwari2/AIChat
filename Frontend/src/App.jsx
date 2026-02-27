@@ -233,6 +233,7 @@ export default function App() {
   const [isWaiting,     setIsWaiting]     = useState(false);
   const [sidebarOpen,   setSidebarOpen]   = useState(true);
   const [copiedId,      setCopiedId]      = useState(null);
+  const [feedback,      setFeedback]      = useState({});   // { [msgId]: 'up' | 'down' }
   const [currentConvId, setCurrentConvId] = useState(null);
 
   const [conversations, setConversations] = useState(() => {
@@ -332,6 +333,25 @@ export default function App() {
     try { await navigator.clipboard.writeText(text); setCopiedId(id); setTimeout(() => setCopiedId(null), 2000); }
     catch { /* ignore */ }
   };
+
+  const handleFeedback = (id, type) => {
+    setFeedback((prev) => ({ ...prev, [id]: prev[id] === type ? null : type }));
+  };
+
+  const handleRegenerate = useCallback((msgIndex) => {
+    if (isStreaming || isWaiting) return;
+    // Find the user message just before this bot message
+    let userMsg = null;
+    for (let i = msgIndex - 1; i >= 0; i--) {
+      if (messages[i].sender === 'user') { userMsg = messages[i]; break; }
+    }
+    if (!userMsg) return;
+    // Remove bot message from UI
+    setMessages((prev) => prev.slice(0, msgIndex));
+    setIsWaiting(true);
+    // Ask server to pop last assistant response and re-process
+    socket.emit('regenerate', { input: userMsg.text });
+  }, [messages, socket, isStreaming, isWaiting]);
 
   const grouped = conversations.reduce((acc, c) => {
     const lbl = fmtDate(c.createdAt);
@@ -433,7 +453,7 @@ export default function App() {
             <div className="empty-state">
               <div className="empty-icon"><ZapIcon size={22} /></div>
               <h2>How can I help you today?</h2>
-              <p>Your enterprise AI assistant, powered by Gemini.</p>
+              <p>Your enterprise AI assistant, powered by Groq.</p>
               <div className="capability-cards">
                 {CAPS.map(({ Icon, title, desc }, i) => (
                   <div key={i} className="capability-card"
@@ -485,9 +505,24 @@ export default function App() {
                         </button>
                         {msg.sender === 'bot' && (
                           <>
-                            <button className="action-btn" title="Good response"><ThumbUpIcon /></button>
-                            <button className="action-btn" title="Bad response"><ThumbDownIcon /></button>
-                            <button className="action-btn" title="Regenerate"><RefreshIcon /></button>
+                            <button
+                              className={`action-btn ${feedback[msg.id] === 'up' ? 'active-up' : ''}`}
+                              onClick={() => handleFeedback(msg.id, 'up')}
+                              title="Good response">
+                              <ThumbUpIcon />
+                            </button>
+                            <button
+                              className={`action-btn ${feedback[msg.id] === 'down' ? 'active-down' : ''}`}
+                              onClick={() => handleFeedback(msg.id, 'down')}
+                              title="Bad response">
+                              <ThumbDownIcon />
+                            </button>
+                            <button
+                              className="action-btn"
+                              onClick={() => handleRegenerate(messages.findIndex((m) => m.id === msg.id))}
+                              title="Regenerate response">
+                              <RefreshIcon />
+                            </button>
                           </>
                         )}
                       </div>
