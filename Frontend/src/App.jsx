@@ -19,19 +19,16 @@ function App() {
     const socketInstance = io("http://localhost:3000");
     setSocket(socketInstance); 
 
-    // Jab chunk aaye, text ko REPLACE karein, APPEND NAHI (Bug fix)
+    // Jab chunk aaye, text ko REPLACE karein (Streaming Bug Fix)
     socketInstance.on('ai-message-chunk', (data) => {
       setMessages((prevMessages) => {
         const lastMessage = prevMessages[prevMessages.length - 1];
 
-        // Agar bot type kar raha hai, toh text update karo
         if (lastMessage && lastMessage.sender === 'bot' && lastMessage.isStreaming) {
           const updatedMessages = [...prevMessages];
-          updatedMessages[updatedMessages.length - 1].text = data.text; // Fixed: = instead of +=
+          updatedMessages[updatedMessages.length - 1].text = data.text; // Replacing text
           return updatedMessages;
-        } 
-        // Naya message start karo
-        else {
+        } else {
           const newBotMessage = {
             id: Date.now(),
             text: data.text,
@@ -67,7 +64,6 @@ function App() {
       id: Date.now(),
       text: input,
       sender: 'user',
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
     setMessages((prev) => [...prev, userMessage]);
@@ -82,11 +78,37 @@ function App() {
     }
   };
 
+  // NAYA FUNCTION: Chat aur backend memory clear karne ke liye
+  const handleClearChat = () => {
+    setMessages([]); // UI clear
+    if (socket) {
+      socket.emit('clear-chat'); // Backend array clear
+    }
+  };
+
   return (
     <div className="chat-container">
-      <div className="chat-header">
-        <h1>AI Chat</h1>
-        <p>Always here to help</p>
+      <div className="chat-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h1>AI Chat</h1>
+          <p>Always here to help</p>
+        </div>
+        
+        {/* NAYA BUTTON: Clear Chat */}
+        <button 
+          onClick={handleClearChat} 
+          style={{
+            padding: "8px 16px", 
+            backgroundColor: "#ff4d4f", 
+            color: "white", 
+            border: "none", 
+            borderRadius: "6px", 
+            cursor: "pointer",
+            fontWeight: "bold"
+          }}
+        >
+          Clear Chat
+        </button>
       </div>
 
       <div className="messages-container">
